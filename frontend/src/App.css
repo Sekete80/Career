@@ -1,0 +1,4 @@
+show ip interface brief | include Serial
+ping 203.0.113.1     
+ping 203.0.113.2     
+ping 203.0.113.6     
