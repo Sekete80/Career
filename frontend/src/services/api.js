@@ -6,7 +6,7 @@ import {
   signOut,
   sendEmailVerification,
   sendPasswordResetEmail,
-  confirmPasswordReset,
+  confirmPasswordReset as firebaseConfirmPasswordReset, // Renamed import
   verifyPasswordResetCode
 } from "firebase/auth";
 import { 
@@ -159,7 +159,7 @@ export const verifyResetCode = async (code) => {
  */
 export const confirmPasswordReset = async (code, newPassword) => {
   try {
-    await confirmPasswordReset(auth, code, newPassword);
+    await firebaseConfirmPasswordReset(auth, code, newPassword); // Use renamed import
     console.log('✅ Password reset successfully');
     return { success: true, message: 'Password reset successfully' };
   } catch (error) {
