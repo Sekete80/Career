@@ -4,7 +4,10 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut,
-  sendEmailVerification 
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  confirmPasswordReset,
+  verifyPasswordResetCode
 } from "firebase/auth";
 import { 
   getFirestore, 
@@ -108,8 +111,78 @@ export const logoutUser = async () => {
   await signOut(auth);
 };
 
-// ... (keep all your other functions exactly as they are - they're perfect!)
-// All your student functions, job functions, profile functions remain unchanged
+/**
+ * Send password reset email to user
+ */
+export const sendPasswordReset = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    console.log('✅ Password reset email sent successfully');
+    return { success: true, message: 'Password reset email sent successfully' };
+  } catch (error) {
+    console.error('❌ Error sending password reset email:', error);
+    let errorMessage = 'Failed to send password reset email';
+    
+    switch (error.code) {
+      case 'auth/user-not-found':
+        errorMessage = 'No account found with this email address';
+        break;
+      case 'auth/invalid-email':
+        errorMessage = 'Invalid email address';
+        break;
+      case 'auth/too-many-requests':
+        errorMessage = 'Too many attempts. Please try again later';
+        break;
+      default:
+        errorMessage = error.message;
+    }
+    
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Verify password reset code
+ */
+export const verifyResetCode = async (code) => {
+  try {
+    await verifyPasswordResetCode(auth, code);
+    return { success: true, message: 'Reset code is valid' };
+  } catch (error) {
+    console.error('❌ Error verifying reset code:', error);
+    throw new Error('Invalid or expired reset code');
+  }
+};
+
+/**
+ * Confirm password reset with new password
+ */
+export const confirmPasswordReset = async (code, newPassword) => {
+  try {
+    await confirmPasswordReset(auth, code, newPassword);
+    console.log('✅ Password reset successfully');
+    return { success: true, message: 'Password reset successfully' };
+  } catch (error) {
+    console.error('❌ Error confirming password reset:', error);
+    let errorMessage = 'Failed to reset password';
+    
+    switch (error.code) {
+      case 'auth/weak-password':
+        errorMessage = 'Password is too weak';
+        break;
+      case 'auth/expired-action-code':
+        errorMessage = 'Reset code has expired';
+        break;
+      case 'auth/invalid-action-code':
+        errorMessage = 'Invalid reset code';
+        break;
+      default:
+        errorMessage = error.message;
+    }
+    
+    throw new Error(errorMessage);
+  }
+};
 
 // ===== STUDENT FUNCTIONS =====
 export const getAvailableCourses = async () => {
@@ -147,7 +220,6 @@ export const applyForCourse = async (studentId, courseId, institutionId, documen
 };
 
 // ===== JOB FUNCTIONS =====
-// ===== JOB POSTING FUNCTIONS =====
 export const postJob = async (companyId, jobData) => {
   try {
     const jobWithMeta = {
@@ -192,7 +264,6 @@ export const getAvailableJobs = async (filters = {}) => {
   }
 };
 
-// Keep your existing job functions below these new ones
 export const getJobPostings = async (filters = {}) => {
   let q = query(collection(db, 'jobPostings'), where('status', '==', 'active'));
   
@@ -246,7 +317,6 @@ export const getStudentJobApplications = async (studentId) => {
     const q = query(
       collection(db, 'jobApplications'),
       where('studentId', '==', studentId)
-      // Remove this line: orderBy('appliedAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
     const applications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -464,3 +534,5 @@ export const getDocument = (collection, id) => getDoc(doc(db, collection, id));
 export const setDocument = (collection, id, data) => setDoc(doc(db, collection, id), data);
 export const updateDocument = (collection, id, data) => updateDoc(doc(db, collection, id), data);
 export const addDocument = (collection, data) => addDoc(collection(db, collection), data);
+
+export default app;
