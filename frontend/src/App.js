@@ -58,6 +58,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -65,27 +66,35 @@ function App() {
         setUser(user);
         
         try {
+          // Try to get user role from Firestore
           const userDoc = await getDocument('users', user.uid);
           if (userDoc.exists()) {
             const role = userDoc.data().role;
             setUserRole(role);
             localStorage.setItem('userRole', role);
+            localStorage.setItem('userId', user.uid);
+            setConnectionError(false);
             console.log('User role from Firestore:', role);
           } else {
+            // Fallback to localStorage
             const role = localStorage.getItem('userRole') || 'student';
             setUserRole(role);
             console.log('User role from localStorage:', role);
           }
         } catch (error) {
           console.error('Error fetching user role:', error);
+          // Fallback to localStorage on error
           const role = localStorage.getItem('userRole') || 'student';
           setUserRole(role);
+          setConnectionError(true);
         }
         
       } else {
         setUser(null);
         setUserRole(null);
         localStorage.removeItem('userRole');
+        localStorage.removeItem('userId');
+        setConnectionError(false);
       }
       setLoading(false);
     });
@@ -106,7 +115,7 @@ function App() {
     return children;
   };
 
-  // Public Route Component (redirect to dashboard if already logged in)
+  // Public Route Component
   const PublicRoute = ({ children }) => {
     if (user) {
       const dashboardPath = `/${userRole}-dashboard`;
@@ -126,9 +135,27 @@ function App() {
     );
   }
 
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
+      setUser(null);
+      setUserRole(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
     <Router>
       <div className="App d-flex flex-column min-vh-100">
+        {connectionError && (
+          <div className="alert alert-warning text-center mb-0" role="alert">
+            ⚠️ Connection issues detected. Some features may not work properly.
+          </div>
+        )}
+        
         <div className="flex-grow-1">
           <Routes>
             {/* Public Routes */}
@@ -208,7 +235,7 @@ function App() {
           </Routes>
         </div>
         
-        {/* Footer - Appears on all pages */}
+        {/* Footer */}
         <Footer />
       </div>
     </Router>
